@@ -1,0 +1,20 @@
+package com.vamshi.HospitalManagementSystem.auth.dto;
+
+import java.util.UUID;
+
+import com.vamshi.HospitalManagementSystem.common.enums.Role;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class AuthResponse {
+    private String token;
+
+    private UUID id;
+
+    private Role role;
+
+    private String name;
+}

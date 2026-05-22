@@ -1,0 +1,40 @@
+package com.vamshi.HospitalManagementSystem.prescription.entities;
+
+import java.util.UUID;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Entity
+@Table(name = "prescription_items")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class PrescriptionItemEntity{
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne
+    @JoinColumn(name = "prescription_id", nullable = false)
+    private PrescriptionEntity prescription;
+
+    @Column(name = "medicine_name", nullable = false)
+    private String medicineName;
+
+    @Column(nullable = false)
+    private String dosage;
+
+    @Column(nullable = false)
+    private String duration;
+
+    @Column(columnDefinition = "TEXT")
+    private String instructions;
+}

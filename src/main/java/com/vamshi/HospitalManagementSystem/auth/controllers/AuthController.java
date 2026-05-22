@@ -1,0 +1,48 @@
+package com.vamshi.HospitalManagementSystem.auth.controllers;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.vamshi.HospitalManagementSystem.auth.dto.AuthResponse;
+import com.vamshi.HospitalManagementSystem.auth.dto.LoginRequest;
+import com.vamshi.HospitalManagementSystem.auth.dto.RegisterRequest;
+import com.vamshi.HospitalManagementSystem.auth.services.AuthService;
+import com.vamshi.HospitalManagementSystem.common.ApiResponse;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/auth")
+public class AuthController {
+
+        final AuthService authService;
+
+        @PostMapping("/register")
+        public ResponseEntity<ApiResponse<AuthResponse>> register(
+                        @RequestBody @Valid RegisterRequest request) {
+                AuthResponse response = authService.register(request);
+
+                System.out.println("====================REGISTER CONTROLLER=====================");
+
+                return ResponseEntity.status(HttpStatus.CREATED)
+                                .body(ApiResponse.success("Registered Successfully", response));
+        }
+
+        @PostMapping("/login")
+        public ResponseEntity<ApiResponse<AuthResponse>> login(
+                        @RequestBody @Valid LoginRequest request) {
+
+                AuthResponse response = authService.login(request);
+
+                return ResponseEntity.status(HttpStatus.OK)
+                                .body(ApiResponse.success(
+                                                "Login successful",
+                                                response));
+        }
+}

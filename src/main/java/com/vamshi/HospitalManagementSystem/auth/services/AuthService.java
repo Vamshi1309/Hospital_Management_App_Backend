@@ -1,0 +1,12 @@
+package com.vamshi.HospitalManagementSystem.auth.services;
+
+import com.vamshi.HospitalManagementSystem.auth.dto.AuthResponse;
+import com.vamshi.HospitalManagementSystem.auth.dto.LoginRequest;
+import com.vamshi.HospitalManagementSystem.auth.dto.RegisterRequest;
+
+public interface AuthService {
+
+    AuthResponse register(RegisterRequest request);
+
+    AuthResponse login(LoginRequest request);
+}
