@@ -4,11 +4,13 @@ import java.util.UUID;
 
 import com.vamshi.HospitalManagementSystem.common.enums.MedicineFrequency;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+@Builder
 public class PrescriptionItemResponse {
     private UUID itemId;
 

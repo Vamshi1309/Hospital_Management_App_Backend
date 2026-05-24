@@ -11,6 +11,7 @@ import com.vamshi.HospitalManagementSystem.common.enums.AppointmentStatus;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<AppointmentEntity, UUID> {
+
     List<AppointmentEntity> findByPatientId(UUID patientId);
 
     List<AppointmentEntity> findByDoctorId(UUID doctorId);

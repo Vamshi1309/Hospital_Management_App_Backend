@@ -2,6 +2,8 @@ package com.vamshi.HospitalManagementSystem.prescription.entities;
 
 import java.util.UUID;
 
+import com.vamshi.HospitalManagementSystem.common.enums.MedicineFrequency;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,7 +18,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class PrescriptionItemEntity{
+public class PrescriptionItemEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -33,8 +35,20 @@ public class PrescriptionItemEntity{
     private String dosage;
 
     @Column(nullable = false)
-    private String duration;
+    private Integer duration;
 
     @Column(columnDefinition = "TEXT")
     private String instructions;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MedicineFrequency frequency;
+
+    @PrePersist
+    public void prePersist() {
+
+        if (frequency == null) {
+            frequency = MedicineFrequency.MORNING_AFTERNOON;
+        }
+    }
 }
