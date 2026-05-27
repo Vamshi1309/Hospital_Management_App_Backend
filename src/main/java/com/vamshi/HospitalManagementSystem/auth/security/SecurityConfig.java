@@ -22,93 +22,100 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtFilter jwtFilter;
+        private final JwtFilter jwtFilter;
 
-    private final UserDetailsServiceImpl userDetailsServiceImpl;
+        private final UserDetailsServiceImpl userDetailsServiceImpl;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(
-                        SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**")
-                        .permitAll()
-                        .requestMatchers("/api/admin/**")
-                        .hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/appointments")
-                        .hasAnyRole("RECEPTIONIST", "PATIENT")
+        private final CustomAuthenticationEntryPoint authEntryPoint;
+        private final CustomAccessDeniedHandler accessDeniedHandler;
 
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/appointments")
-                        .hasAnyRole("RECEPTIONIST", "ADMIN")
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+                http
+                                .csrf(csrf -> csrf.disable())
+                                .sessionManagement(session -> session.sessionCreationPolicy(
+                                                SessionCreationPolicy.STATELESS))
+                                .exceptionHandling(exception -> exception.authenticationEntryPoint(authEntryPoint)
+                                                .accessDeniedHandler(accessDeniedHandler))
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers("/api/auth/**")
+                                                .permitAll()
+                                                .requestMatchers("/api/admin/**")
+                                                .hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/appointments")
+                                                .hasAnyRole("RECEPTIONIST", "PATIENT")
 
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/appointments/doctor/**")
-                        .hasRole("DOCTOR")
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/appointments")
+                                                .hasAnyRole("RECEPTIONIST", "ADMIN")
 
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/appointments/patient/**")
-                        .hasAnyRole("PATIENT", "DOCTOR", "RECEPTIONIST")
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/appointments/doctor/**")
+                                                .hasRole("DOCTOR")
 
-                        .requestMatchers(HttpMethod.PATCH,
-                                "/api/appointments/*/status")
-                        .hasAnyRole("DOCTOR", "RECEPTIONIST")
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/appointments/patient/**")
+                                                .hasAnyRole("PATIENT", "DOCTOR", "RECEPTIONIST")
 
-                        // Prescriptions
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/prescriptions")
-                        .hasRole("DOCTOR")
+                                                .requestMatchers(HttpMethod.PATCH,
+                                                                "/api/appointments/*/status")
+                                                .hasAnyRole("DOCTOR", "RECEPTIONIST")
 
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/prescriptions/doctor/**")
-                        .hasRole("DOCTOR")
+                                                // Prescriptions
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/prescriptions")
+                                                .hasRole("DOCTOR")
 
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/prescriptions/patient/**")
-                        .hasAnyRole("PATIENT", "DOCTOR", "PHARMACIST")
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/prescriptions/doctor/**")
+                                                .hasRole("DOCTOR")
 
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/prescriptions/**")
-                        .hasAnyRole("DOCTOR", "PATIENT", "PHARMACIST")
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/prescriptions/patient/**")
+                                                .hasAnyRole("PATIENT", "DOCTOR", "PHARMACIST")
 
-                        // Lab Reports
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/lab-reports")
-                        .hasRole("RADIOLOGIST")
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/prescriptions/**")
+                                                .hasAnyRole("DOCTOR", "PATIENT", "PHARMACIST")
 
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/lab-reports/**")
-                        .hasAnyRole("RADIOLOGIST", "DOCTOR",
-                                "PATIENT", "ADMIN")
-                        .anyRequest().authenticated())
-                .addFilterBefore(
-                        jwtFilter,
-                        UsernamePasswordAuthenticationFilter.class)
-                .authenticationProvider(authenticationProvider());
+                                                // Lab Reports
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/lab-reports")
+                                                .hasRole("RADIOLOGIST")
 
-        return http.build();
-    }
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/lab-reports/**")
+                                                .hasAnyRole("RADIOLOGIST", "DOCTOR",
+                                                                "PATIENT", "ADMIN")
+                                                .requestMatchers("/api/inventory/**")
+                                                .hasAnyRole("PHARMACIST", "ADMIN")
+                                                .anyRequest().authenticated())
+                                .addFilterBefore(
+                                                jwtFilter,
+                                                UsernamePasswordAuthenticationFilter.class)
+                                .authenticationProvider(authenticationProvider());
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+                return http.build();
+        }
 
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-        provider.setUserDetailsService(userDetailsServiceImpl);
-        provider.setPasswordEncoder(passwordEncoder());
+        @Bean
+        public AuthenticationProvider authenticationProvider() {
+                DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
 
-        return provider;
-    }
+                provider.setUserDetailsService(userDetailsServiceImpl);
+                provider.setPasswordEncoder(passwordEncoder());
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+                return provider;
+        }
+
+        @Bean
+        public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+                return config.getAuthenticationManager();
+        }
 }

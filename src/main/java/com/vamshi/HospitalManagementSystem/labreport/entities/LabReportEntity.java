@@ -3,6 +3,8 @@ package com.vamshi.HospitalManagementSystem.labreport.entities;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import com.vamshi.HospitalManagementSystem.appointment.entities.AppointmentEntity;
 import com.vamshi.HospitalManagementSystem.common.enums.ReportType;
 import com.vamshi.HospitalManagementSystem.user.entities.UserEntity;
@@ -54,10 +56,6 @@ public class LabReportEntity {
     private String findings;
 
     @Column(name = "created_at")
+    @CreationTimestamp
     private LocalDateTime createdAt;
-
-    @PrePersist
-    private void setCreatedAt() {
-        this.createdAt = LocalDateTime.now();
-    }
 }

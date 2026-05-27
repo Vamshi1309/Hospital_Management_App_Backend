@@ -17,7 +17,7 @@ import com.vamshi.HospitalManagementSystem.exceptions.ResourceAlreadyExistsExcep
 import com.vamshi.HospitalManagementSystem.exceptions.ResourceNotFoundException;
 import com.vamshi.HospitalManagementSystem.pharmacist.entities.PharmacistProfileEntity;
 import com.vamshi.HospitalManagementSystem.pharmacist.repositories.PharmacistProfileRepository;
-import com.vamshi.HospitalManagementSystem.radiologist.entities.RadiologistProfile;
+import com.vamshi.HospitalManagementSystem.radiologist.entities.RadiologistEntity;
 import com.vamshi.HospitalManagementSystem.radiologist.repositories.RadiologistProfileRepository;
 import com.vamshi.HospitalManagementSystem.receptionist.entities.ReceptionistProfile;
 import com.vamshi.HospitalManagementSystem.receptionist.repositories.ReceptionistProfileRepository;
@@ -74,7 +74,7 @@ public class AdminServiceImpl implements AdminService {
                                                         .build());
 
                         case RADIOLOGIST -> radiologistProfileRepository.save(
-                                        RadiologistProfile.builder()
+                                        RadiologistEntity.builder()
                                                         .user(savedUser)
                                                         .build());
 

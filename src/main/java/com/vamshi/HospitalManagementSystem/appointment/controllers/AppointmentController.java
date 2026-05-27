@@ -29,7 +29,7 @@ public class AppointmentController {
 
     private final AppointmentService appointmentService;
 
-    @PostMapping("/")
+    @PostMapping()
     public ResponseEntity<ApiResponse<AppointmentResponse>> createAppointment(
             @RequestBody @Valid CreateAppointmentRequest request) {
 
@@ -39,7 +39,7 @@ public class AppointmentController {
                 .body(ApiResponse.success("Appointment Created Successfully", response));
     }
 
-    @GetMapping("/")
+    @GetMapping()
     public ResponseEntity<ApiResponse<List<AppointmentResponse>>> getAppointments() {
 
         List<AppointmentResponse> response = appointmentService.getAllAppointments();

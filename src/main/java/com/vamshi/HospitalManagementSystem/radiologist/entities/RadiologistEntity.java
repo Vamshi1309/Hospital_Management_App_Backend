@@ -1,10 +1,9 @@
-package com.vamshi.HospitalManagementSystem.doctor.entities;
+package com.vamshi.HospitalManagementSystem.radiologist.entities;
 
 import java.util.UUID;
 
 import com.vamshi.HospitalManagementSystem.user.entities.UserEntity;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,7 +11,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -20,14 +18,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "doctor_profiles")
+@Table(name = "radiologist_profile")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class DoctorProfileEntity {
-
+public class RadiologistEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -36,13 +33,7 @@ public class DoctorProfileEntity {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserEntity user;
 
-    private String qualification;
+    private String labSection;
 
-    private String specialization;
-
-    @Min(0)
-    private Integer experienceInYears;
-
-    @Column(columnDefinition = "TEXT")
-    private String availabilityJson;
+    private String certification;
 }

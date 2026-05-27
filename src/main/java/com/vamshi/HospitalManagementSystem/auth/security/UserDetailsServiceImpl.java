@@ -26,7 +26,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with phoneNumber: " + phoneNumber));
 
         List<SimpleGrantedAuthority> authorities = List.of(
-                new SimpleGrantedAuthority(user.getRole().name()));
+                new SimpleGrantedAuthority("ROLE_"+user.getRole().name()));
 
         return new User(
                 user.getPhoneNumber(),
