@@ -2,7 +2,7 @@
 
     import java.util.UUID;
 
-    import com.vamshi.HospitalManagementSystem.common.enums.XRayType;
+    import com.vamshi.HospitalManagementSystem.common.enums.ReportType;
     import com.vamshi.HospitalManagementSystem.user.entities.UserEntity;
 
     import jakarta.persistence.Entity;
@@ -39,7 +39,7 @@
 
         @Enumerated(EnumType.STRING)
         @NonNull
-        private XRayType labSection;
+        private ReportType labSection;
 
         private String certification;
     }

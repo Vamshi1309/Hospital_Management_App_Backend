@@ -2,6 +2,7 @@ package com.vamshi.HospitalManagementSystem.auth.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -32,8 +33,56 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(
                         SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/auth/register")
+                        .requestMatchers("/api/auth/**")
                         .permitAll()
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/appointments")
+                        .hasAnyRole("RECEPTIONIST", "PATIENT")
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/appointments")
+                        .hasAnyRole("RECEPTIONIST", "ADMIN")
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/appointments/doctor/**")
+                        .hasRole("DOCTOR")
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/appointments/patient/**")
+                        .hasAnyRole("PATIENT", "DOCTOR", "RECEPTIONIST")
+
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/appointments/*/status")
+                        .hasAnyRole("DOCTOR", "RECEPTIONIST")
+
+                        // Prescriptions
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/prescriptions")
+                        .hasRole("DOCTOR")
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/prescriptions/doctor/**")
+                        .hasRole("DOCTOR")
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/prescriptions/patient/**")
+                        .hasAnyRole("PATIENT", "DOCTOR", "PHARMACIST")
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/prescriptions/**")
+                        .hasAnyRole("DOCTOR", "PATIENT", "PHARMACIST")
+
+                        // Lab Reports
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/lab-reports")
+                        .hasRole("RADIOLOGIST")
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/lab-reports/**")
+                        .hasAnyRole("RADIOLOGIST", "DOCTOR",
+                                "PATIENT", "ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(
                         jwtFilter,

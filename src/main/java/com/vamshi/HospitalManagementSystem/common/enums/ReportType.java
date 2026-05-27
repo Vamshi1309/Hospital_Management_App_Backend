@@ -1,6 +1,6 @@
 package com.vamshi.HospitalManagementSystem.common.enums;
 
-public enum XRayType {
+public enum ReportType {
     XRAY,
     MRI,
     CT_SCAN,

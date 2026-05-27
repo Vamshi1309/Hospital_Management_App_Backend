@@ -47,6 +47,13 @@ public class GlobalExceptionHandler {
                                 .body(ApiResponse.error(ex.getMessage()));
         }
 
+        @ExceptionHandler(BadRequestException.class)
+        public ResponseEntity<ApiResponse<?>> handleDuplicate(
+                        BadRequestException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.error(ex.getMessage()));
+        }
+
         @ExceptionHandler(UnauthorizedRoleException.class)
         public ResponseEntity<ApiResponse<?>> handleRoleMismatch(
                         UnauthorizedRoleException ex) {

@@ -4,11 +4,12 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.vamshi.HospitalManagementSystem.appointment.entities.AppointmentEntity;
-import com.vamshi.HospitalManagementSystem.common.enums.XRayType;
+import com.vamshi.HospitalManagementSystem.common.enums.ReportType;
 import com.vamshi.HospitalManagementSystem.user.entities.UserEntity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -19,7 +20,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LabReport {
+@Builder
+public class LabReportEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -42,7 +44,7 @@ public class LabReport {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "report_type", nullable = false)
-    private XRayType reportType;
+    private ReportType reportType;
 
     // File URL / S3 URL / local path
     @Column(name = "report_url", nullable = false)

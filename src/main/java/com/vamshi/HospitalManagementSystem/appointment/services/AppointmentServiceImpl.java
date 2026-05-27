@@ -31,6 +31,13 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         @Override
         public AppointmentResponse createAppointment(CreateAppointmentRequest request) {
+                String phoneNumber = SecurityContextHolder
+                                .getContext()
+                                .getAuthentication()
+                                .getName();
+
+                UserEntity createdBy = userRepository.findByPhoneNumber(phoneNumber)
+                                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
                 Optional<UserEntity> patientOptional = userRepository.findById(request.getPatientId());
                 if (patientOptional.isEmpty()) {
                         throw new ResourceNotFoundException("Patient Not Found With That ID");
@@ -49,19 +56,6 @@ public class AppointmentServiceImpl implements AppointmentService {
                 UserEntity doctor = doctorOptional.get();
                 if (doctor.getRole() != Role.DOCTOR) {
                         throw new UnauthorizedRoleException("Role Mismatch");
-                }
-
-                String phoneNumber = SecurityContextHolder
-                                .getContext()
-                                .getAuthentication()
-                                .getName();
-
-                UserEntity createdBy = userRepository.findByPhoneNumber(phoneNumber)
-                                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
-
-                if (createdBy.getRole() != Role.PATIENT || createdBy.getRole() != Role.RECEPTIONIST) {
-                        throw new UnauthorizedRoleException(
-                                        createdBy.getName() + " Are Not Allowed to create Appointment");
                 }
 
                 if (createdBy.getRole() == Role.PATIENT &&
