@@ -1,0 +1,193 @@
+package com.vamshi.HospitalManagementSystem.pharmacy.services;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
+import com.vamshi.HospitalManagementSystem.exceptions.ResourceAlreadyExistsException;
+import com.vamshi.HospitalManagementSystem.exceptions.ResourceNotFoundException;
+import com.vamshi.HospitalManagementSystem.inventory.entities.MedicineEntity;
+import com.vamshi.HospitalManagementSystem.inventory.repositories.InventoryRepository;
+import com.vamshi.HospitalManagementSystem.inventory.services.InventoryService;
+import com.vamshi.HospitalManagementSystem.pharmacy.dtos.DispenseItemRequest;
+import com.vamshi.HospitalManagementSystem.pharmacy.dtos.DispenseItemResponse;
+import com.vamshi.HospitalManagementSystem.pharmacy.dtos.DispenseMedicineRequest;
+import com.vamshi.HospitalManagementSystem.pharmacy.dtos.DispenseResponse;
+import com.vamshi.HospitalManagementSystem.pharmacy.entities.DispenseEntity;
+import com.vamshi.HospitalManagementSystem.pharmacy.repositories.DispenseRepository;
+import com.vamshi.HospitalManagementSystem.prescription.entities.PrescriptionEntity;
+import com.vamshi.HospitalManagementSystem.prescription.repositories.PrescriptionRepository;
+import com.vamshi.HospitalManagementSystem.user.entities.UserEntity;
+import com.vamshi.HospitalManagementSystem.user.repositories.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class PharmacyServiceImpl implements PharmacyService {
+
+        private final DispenseRepository dispenseRepository;
+        private final InventoryService inventoryService;
+        private final InventoryRepository inventoryRepository;
+        private final UserRepository userRepository;
+        private final PrescriptionRepository prescriptionRepository;
+
+        @Override
+        public DispenseResponse dispenseMedicine(DispenseMedicineRequest request) {
+                String phoneNumber = SecurityContextHolder.getContext().getAuthentication().getName();
+
+                UserEntity pharmacist = userRepository.findByPhoneNumber(phoneNumber)
+                                .orElseThrow(() -> new ResourceNotFoundException("Pharmacist not found"));
+
+                PrescriptionEntity prescription = prescriptionRepository
+                                .findById(request.getPrescriptionId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Prescription not found"));
+
+                if (dispenseRepository.existsByPrescriptionId(
+                                prescription.getId())) {
+                        throw new ResourceAlreadyExistsException(
+                                        "Prescription already dispensed");
+                }
+
+                double totalAmount = 0.0;
+
+                List<DispenseItemResponse> itemResponses = new ArrayList<>();
+
+                List<DispenseEntity> dispenseList = new ArrayList<>();
+
+                for (DispenseItemRequest item : request.getItems()) {
+                        MedicineEntity medicine = inventoryRepository
+                                        .findById(item.getMedicineId())
+                                        .orElseThrow(() -> new ResourceNotFoundException(
+                                                        "Medicine not found: "
+                                                                        + item.getMedicineId()));
+
+                        inventoryService.consumeMedicine(medicine.getId(), item.getQuantityDispensed());
+
+                        double itemTotal = medicine.getPrice()
+                                        * item.getQuantityDispensed();
+                        totalAmount += itemTotal;
+
+                        itemResponses.add(DispenseItemResponse.builder()
+                                        .medicineId(medicine.getId())
+                                        .medicineName(medicine.getMedicineName())
+                                        .quantityDispensed(item.getQuantityDispensed())
+                                        .pricePerUnit(medicine.getPrice())
+                                        .totalPrice(itemTotal)
+                                        .build());
+
+                        dispenseList.add(DispenseEntity.builder()
+                                        .prescription(prescription)
+                                        .patient(prescription.getPatient())
+                                        .dispensedBy(pharmacist)
+                                        .medicine(medicine)
+                                        .quantityDispensed(item.getQuantityDispensed())
+                                        .totalAmount(itemTotal)
+                                        .notes(request.getNotes())
+                                        .build());
+
+                }
+
+                dispenseRepository.saveAll(dispenseList);
+
+                // Step 6 — return full response with bill
+                return DispenseResponse.builder()
+                                .prescriptionId(prescription.getId())
+                                .patientId(prescription.getPatient().getId())
+                                .patientName(prescription.getPatient().getName())
+                                .dispensedById(pharmacist.getId())
+                                .dispensedByName(pharmacist.getName())
+                                .items(itemResponses)
+                                .totalAmount(totalAmount)
+                                .notes(request.getNotes())
+                                .dispensedAt(LocalDateTime.now())
+                                .build();
+
+        }
+
+        // ── Get By Patient ───────────────────────────────────
+        @Override
+        public List<DispenseResponse> getDispenseHistoryByPatient(
+                        UUID patientId) {
+
+                List<DispenseEntity> history = dispenseRepository
+                                .findByPatientId(patientId);
+
+                if (history.isEmpty()) {
+                        throw new ResourceNotFoundException(
+                                        "No dispense history found for this patient");
+                }
+
+                return history.stream()
+                                .map(this::mapToResponse)
+                                .toList();
+        }
+
+        // ── Get By Pharmacist ────────────────────────────────
+        @Override
+        public List<DispenseResponse> getDispenseHistoryByPharmacist(
+                        UUID pharmacistId) {
+
+                List<DispenseEntity> history = dispenseRepository
+                                .findByDispensedById(pharmacistId);
+
+                if (history.isEmpty()) {
+                        throw new ResourceNotFoundException(
+                                        "No dispense history found for this pharmacist");
+                }
+
+                return history.stream()
+                                .map(this::mapToResponse)
+                                .toList();
+        }
+
+        // ── Get By Prescription ──────────────────────────────
+        @Override
+        public List<DispenseResponse> getDispenseHistoryByPrescription(
+                        UUID prescriptionId) {
+
+                List<DispenseEntity> history = dispenseRepository
+                                .findByPrescriptionId(prescriptionId);
+
+                if (history.isEmpty()) {
+                        throw new ResourceNotFoundException(
+                                        "No dispense history found for this prescription");
+                }
+
+                return history.stream()
+                                .map(this::mapToResponse)
+                                .toList();
+        }
+
+        // ── Helper ───────────────────────────────────────────
+        private DispenseResponse mapToResponse(DispenseEntity dispense) {
+                return DispenseResponse.builder()
+                                .dispenseId(dispense.getId())
+                                .prescriptionId(dispense.getPrescription().getId())
+                                .patientId(dispense.getPatient().getId())
+                                .patientName(dispense.getPatient().getName())
+                                .dispensedById(dispense.getDispensedBy().getId())
+                                .dispensedByName(dispense.getDispensedBy().getName())
+                                .totalAmount(dispense.getTotalAmount())
+                                .notes(dispense.getNotes())
+                                .dispensedAt(dispense.getDispensedAt())
+                                .items(List.of( // single item wrapped in list
+                                                DispenseItemResponse.builder()
+                                                                .medicineId(dispense.getMedicine().getId())
+                                                                .medicineName(dispense.getMedicine()
+                                                                                .getMedicineName())
+                                                                .quantityDispensed(
+                                                                                dispense.getQuantityDispensed())
+                                                                .pricePerUnit(dispense.getMedicine()
+                                                                                .getPrice())
+                                                                .totalPrice(dispense.getTotalAmount())
+                                                                .build()))
+                                .build();
+        }
+
+}
