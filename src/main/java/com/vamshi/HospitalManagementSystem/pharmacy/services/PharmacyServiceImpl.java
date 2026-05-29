@@ -69,6 +69,7 @@ public class PharmacyServiceImpl implements PharmacyService {
 
                         double itemTotal = medicine.getPrice()
                                         * item.getQuantityDispensed();
+                        
                         totalAmount += itemTotal;
 
                         dispenseList.add(DispenseEntity.builder()

@@ -98,6 +98,8 @@ public class SecurityConfig {
                                                                 "/api/pharmacy/history/**")
                                                 .hasAnyRole("PHARMACIST", "PATIENT",
                                                                 "DOCTOR", "ADMIN")
+                                                .requestMatchers("/api/doctor/**")
+                                                .hasRole("DOCTOR")
                                                 .anyRequest().authenticated())
                                 .addFilterBefore(
                                                 jwtFilter,
