@@ -9,12 +9,17 @@ import org.springframework.stereotype.Repository;
 import com.vamshi.HospitalManagementSystem.pharmacy.entities.DispenseEntity;
 
 @Repository
-public interface DispenseRepository extends JpaRepository<DispenseEntity, UUID> {
-    List<DispenseEntity> findByPatientId(UUID patientId);
+public interface DispenseRepository
+        extends JpaRepository<DispenseEntity, UUID> {
 
-    List<DispenseEntity> findByDispensedById(UUID pharmacistId);
+    List<DispenseEntity> findByPatientIdOrderByDispensedAtDesc(
+            UUID patientId);
 
-    List<DispenseEntity> findByPrescriptionId(UUID prescriptionId);
+    List<DispenseEntity> findByDispensedByIdOrderByDispensedAtDesc(
+            UUID pharmacistId);
+
+    List<DispenseEntity> findByPrescriptionIdOrderByDispensedAtDesc(
+            UUID prescriptionId);
 
     boolean existsByPrescriptionId(UUID prescriptionId);
 }

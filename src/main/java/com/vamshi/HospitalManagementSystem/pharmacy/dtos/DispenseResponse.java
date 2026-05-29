@@ -14,7 +14,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DispenseResponse {
-    private UUID dispenseId;
 
     private UUID prescriptionId;
 

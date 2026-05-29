@@ -56,8 +56,6 @@ public class PharmacyServiceImpl implements PharmacyService {
 
                 double totalAmount = 0.0;
 
-                List<DispenseItemResponse> itemResponses = new ArrayList<>();
-
                 List<DispenseEntity> dispenseList = new ArrayList<>();
 
                 for (DispenseItemRequest item : request.getItems()) {
@@ -73,14 +71,6 @@ public class PharmacyServiceImpl implements PharmacyService {
                                         * item.getQuantityDispensed();
                         totalAmount += itemTotal;
 
-                        itemResponses.add(DispenseItemResponse.builder()
-                                        .medicineId(medicine.getId())
-                                        .medicineName(medicine.getMedicineName())
-                                        .quantityDispensed(item.getQuantityDispensed())
-                                        .pricePerUnit(medicine.getPrice())
-                                        .totalPrice(itemTotal)
-                                        .build());
-
                         dispenseList.add(DispenseEntity.builder()
                                         .prescription(prescription)
                                         .patient(prescription.getPatient())
@@ -93,8 +83,21 @@ public class PharmacyServiceImpl implements PharmacyService {
 
                 }
 
-                dispenseRepository.saveAll(dispenseList);
+                List<DispenseEntity> savedList = dispenseRepository.saveAll(dispenseList);
 
+                List<DispenseItemResponse> itemResponses = savedList
+                                .stream()
+                                .map((DispenseEntity saved) -> DispenseItemResponse.builder()
+                                                .dispenseId(saved.getId()) // ← ID exists now
+                                                .medicineId(saved.getMedicine().getId())
+                                                .medicineName(saved.getMedicine()
+                                                                .getMedicineName())
+                                                .quantityDispensed(
+                                                                saved.getQuantityDispensed())
+                                                .pricePerUnit(saved.getMedicine().getPrice())
+                                                .totalPrice(saved.getTotalAmount())
+                                                .build())
+                                .toList();
                 // Step 6 — return full response with bill
                 return DispenseResponse.builder()
                                 .prescriptionId(prescription.getId())
@@ -116,7 +119,7 @@ public class PharmacyServiceImpl implements PharmacyService {
                         UUID patientId) {
 
                 List<DispenseEntity> history = dispenseRepository
-                                .findByPatientId(patientId);
+                                .findByPatientIdOrderByDispensedAtDesc(patientId);
 
                 if (history.isEmpty()) {
                         throw new ResourceNotFoundException(
@@ -134,7 +137,7 @@ public class PharmacyServiceImpl implements PharmacyService {
                         UUID pharmacistId) {
 
                 List<DispenseEntity> history = dispenseRepository
-                                .findByDispensedById(pharmacistId);
+                                .findByDispensedByIdOrderByDispensedAtDesc(pharmacistId);
 
                 if (history.isEmpty()) {
                         throw new ResourceNotFoundException(
@@ -152,7 +155,7 @@ public class PharmacyServiceImpl implements PharmacyService {
                         UUID prescriptionId) {
 
                 List<DispenseEntity> history = dispenseRepository
-                                .findByPrescriptionId(prescriptionId);
+                                .findByPrescriptionIdOrderByDispensedAtDesc(prescriptionId);
 
                 if (history.isEmpty()) {
                         throw new ResourceNotFoundException(
@@ -167,7 +170,6 @@ public class PharmacyServiceImpl implements PharmacyService {
         // ── Helper ───────────────────────────────────────────
         private DispenseResponse mapToResponse(DispenseEntity dispense) {
                 return DispenseResponse.builder()
-                                .dispenseId(dispense.getId())
                                 .prescriptionId(dispense.getPrescription().getId())
                                 .patientId(dispense.getPatient().getId())
                                 .patientName(dispense.getPatient().getName())
@@ -176,8 +178,9 @@ public class PharmacyServiceImpl implements PharmacyService {
                                 .totalAmount(dispense.getTotalAmount())
                                 .notes(dispense.getNotes())
                                 .dispensedAt(dispense.getDispensedAt())
-                                .items(List.of( // single item wrapped in list
+                                .items(List.of(
                                                 DispenseItemResponse.builder()
+                                                                .dispenseId(dispense.getId())
                                                                 .medicineId(dispense.getMedicine().getId())
                                                                 .medicineName(dispense.getMedicine()
                                                                                 .getMedicineName())

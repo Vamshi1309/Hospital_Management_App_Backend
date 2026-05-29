@@ -90,6 +90,14 @@ public class SecurityConfig {
                                                                 "PATIENT", "ADMIN")
                                                 .requestMatchers("/api/inventory/**")
                                                 .hasAnyRole("PHARMACIST", "ADMIN")
+                                                .requestMatchers(HttpMethod.POST,
+                                                                "/api/pharmacy/dispense")
+                                                .hasRole("PHARMACIST")
+
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/pharmacy/history/**")
+                                                .hasAnyRole("PHARMACIST", "PATIENT",
+                                                                "DOCTOR", "ADMIN")
                                                 .anyRequest().authenticated())
                                 .addFilterBefore(
                                                 jwtFilter,

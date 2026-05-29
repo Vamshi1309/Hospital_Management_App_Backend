@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class DispenseItemResponse {
 
+    private UUID dispenseId;
     private UUID medicineId;
     private String medicineName;
     private Integer quantityDispensed;
