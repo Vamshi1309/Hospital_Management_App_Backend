@@ -17,50 +17,52 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ReceptionistServiceImpl implements ReceptionistService {
 
-    private final UserRepository userRepository;
+        private final UserRepository userRepository;
 
-    private final ReceptionistProfileRepository receptionistRepository;
+        private final ReceptionistProfileRepository receptionistRepository;
 
-    @Override
-    public ReceptionistProfileResponse getMyProfile() {
-        String phoneNumber = SecurityContextHolder.getContext().getAuthentication().getName();
+        @Override
+        public ReceptionistProfileResponse getMyProfile() {
+                String phoneNumber = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        UserEntity user = userRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                UserEntity user = userRepository.findByPhoneNumber(phoneNumber)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        ReceptionistProfile receptionist = receptionistRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Receptionist not found"));
+                ReceptionistProfile receptionist = receptionistRepository.findByUserId(user.getId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Receptionist not found"));
 
-        return mapToResponse(receptionist);
-    }
-
-    @Override
-    public ReceptionistProfileResponse updateMyProfile(UpdateReceptionistProfileRequest request) {
-        String phoneNumber = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        UserEntity user = userRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        ReceptionistProfile receptionist = receptionistRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Receptionist not found"));
-
-        if (request.getShift() != null) {
-            receptionist.setShift(request.getShift());
+                return mapToResponse(receptionist);
         }
 
-        ReceptionistProfile saved = receptionistRepository
-                .save(receptionist);
+        @Override
+        public ReceptionistProfileResponse updateMyProfile(UpdateReceptionistProfileRequest request) {
+                String phoneNumber = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        return mapToResponse(saved);
-    }
+                UserEntity user = userRepository.findByPhoneNumber(phoneNumber)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-    private ReceptionistProfileResponse mapToResponse(ReceptionistProfile receptionist) {
-        return ReceptionistProfileResponse.builder()
-                .userId(receptionist.getUser().getId())
-                .name(receptionist.getUser().getName())
-                .email(receptionist.getUser().getEmail())
-                .phoneNumber(receptionist.getUser().getPhoneNumber())
-                .shift(receptionist.getShift().toString())
-                .build();
-    }
+                ReceptionistProfile receptionist = receptionistRepository.findByUserId(user.getId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Receptionist not found"));
+
+                if (request.getShift() != null) {
+                        receptionist.setShift(request.getShift());
+                }
+
+                ReceptionistProfile saved = receptionistRepository
+                                .save(receptionist);
+
+                return mapToResponse(saved);
+        }
+
+        private ReceptionistProfileResponse mapToResponse(ReceptionistProfile receptionist) {
+                return ReceptionistProfileResponse.builder()
+                                .userId(receptionist.getUser().getId())
+                                .name(receptionist.getUser().getName())
+                                .email(receptionist.getUser().getEmail())
+                                .phoneNumber(receptionist.getUser().getPhoneNumber())
+                                .shift(receptionist.getShift() != null
+                                                ? receptionist.getShift().name()
+                                                : null)
+                                .build();
+        }
 }

@@ -18,7 +18,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.NonNull;
 import lombok.Setter;
 
 @Entity
@@ -39,6 +38,5 @@ public class ReceptionistProfile {
     private UserEntity user;
 
     @Enumerated(EnumType.STRING)
-    @NonNull
     private Shifts shift;
 }

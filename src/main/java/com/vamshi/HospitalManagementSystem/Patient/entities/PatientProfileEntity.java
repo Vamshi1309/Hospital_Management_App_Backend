@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -21,18 +22,23 @@ import lombok.Setter;
 @Table(name = "patient_profiles")
 @Getter
 @Setter
-@AllArgsConstructor
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class PatientProfileEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @OneToOne
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JoinColumn(name = "user_id",
+                nullable = false,
+                unique = true)
     private UserEntity user;
 
-    private LocalDate dateOfBirth;
-
+    private String dateOfBirth;
     private String bloodGroup;
+    private String emergencyContact;
+    private String insuranceInfo;
 }
