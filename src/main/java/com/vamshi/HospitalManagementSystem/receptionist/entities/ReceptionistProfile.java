@@ -40,5 +40,5 @@ public class ReceptionistProfile {
 
     @Enumerated(EnumType.STRING)
     @NonNull
-    private Shifts Shift;
+    private Shifts shift;
 }

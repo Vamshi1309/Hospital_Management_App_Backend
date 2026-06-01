@@ -94,6 +94,9 @@ public class SecurityConfig {
                                                                 "/api/pharmacy/dispense")
                                                 .hasRole("PHARMACIST")
 
+                                                .requestMatchers("/api/receptionist/**")
+                                                .hasRole("RECEPTIONIST")
+
                                                 .requestMatchers(HttpMethod.GET,
                                                                 "/api/pharmacy/history/**")
                                                 .hasAnyRole("PHARMACIST", "PATIENT",
