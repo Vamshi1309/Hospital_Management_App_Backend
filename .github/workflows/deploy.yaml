@@ -4,6 +4,8 @@ on:
   push: 
     branches:
       - main
+env:
+  ECR_REPO: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}
 
 jobs:
   build-and-push:
