@@ -17,6 +17,8 @@ import com.vamshi.HospitalManagementSystem.auth.security.JwtUtil;
 import com.vamshi.HospitalManagementSystem.common.enums.Role;
 import com.vamshi.HospitalManagementSystem.exceptions.ResourceAlreadyExistsException;
 import com.vamshi.HospitalManagementSystem.exceptions.ResourceNotFoundException;
+import com.vamshi.HospitalManagementSystem.patient.entities.PatientProfileEntity;
+import com.vamshi.HospitalManagementSystem.patient.repositories.PatientProfileRepository;
 import com.vamshi.HospitalManagementSystem.user.entities.UserEntity;
 import com.vamshi.HospitalManagementSystem.user.repositories.UserRepository;
 
@@ -31,6 +33,8 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
 
     private final AuthenticationManager authenticationManager;
+
+    private final PatientProfileRepository patientProfileRepository;
 
     private final JwtUtil jwtUtil;
 
@@ -51,6 +55,13 @@ public class AuthServiceImpl implements AuthService {
 
         UserEntity savedUser = userRepository.save(user);
 
+        PatientProfileEntity patientProfile = PatientProfileEntity
+                .builder()
+                .user(savedUser)
+                .build();
+
+        patientProfileRepository.save(patientProfile);
+
         UserDetails userDetails = new User(
                 savedUser.getPhoneNumber(),
                 savedUser.getPassword(),
@@ -70,23 +81,19 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public AuthResponse login(LoginRequest request){
-        
+    public AuthResponse login(LoginRequest request) {
+
         authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getPhoneNumber(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getPhoneNumber(), request.getPassword()));
 
         UserEntity user = userRepository.findByPhoneNumber(
-            request.getPhoneNumber()
-        ).orElseThrow(() -> new ResourceNotFoundException("User not exist"));
+                request.getPhoneNumber()).orElseThrow(() -> new ResourceNotFoundException("User not exist"));
 
         UserDetails userDetails = new User(
-            user.getPhoneNumber(),
-            user.getPassword(),
-            List.of(
-                new SimpleGrantedAuthority(user.getRole().name())
-            )
-        );
+                user.getPhoneNumber(),
+                user.getPassword(),
+                List.of(
+                        new SimpleGrantedAuthority(user.getRole().name())));
 
         String token = jwtUtil.generateToken(userDetails);
 

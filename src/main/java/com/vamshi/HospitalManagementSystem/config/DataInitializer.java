@@ -1,5 +1,6 @@
 package com.vamshi.HospitalManagementSystem.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -15,27 +16,36 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class DataInitializer implements CommandLineRunner {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${admin.phone}")
+    private String adminPhone;
+
+    @Value("${admin.password}")
+    private String adminPassword;
+
     @Override
     public void run(String... args) throws Exception {
-        if (!userRepository.existsByphoneNumber("9999999999")) {
+
+        if (!userRepository.existsByphoneNumber(adminPhone)) {
+
             UserEntity admin = UserEntity.builder()
                     .name("Super Admin")
-                    .phoneNumber("9999999999")
-                    .email("admin@gmail.com")
-                    .password(passwordEncoder.encode("admin@123"))
+                    .phoneNumber(adminPhone)
+                    .email("admin@hospital.com")
+                    .password(passwordEncoder.encode(adminPassword))
                     .role(Role.ADMIN)
                     .isActive(true)
                     .build();
 
             userRepository.save(admin);
 
-            log.info("✅ Admin created → phone: 9999999999 | password: admin@123");
+            log.info("✅ Admin created → phone: {}",
+                    adminPhone);
         } else {
-            log.info("✅ Admin already exists — skipping creation");
+            log.info("✅ Admin already exists — skipping");
         }
     }
-
 }
