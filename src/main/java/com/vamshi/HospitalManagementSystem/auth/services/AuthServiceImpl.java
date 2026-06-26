@@ -1,5 +1,6 @@
 package com.vamshi.HospitalManagementSystem.auth.services;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,7 +13,11 @@ import org.springframework.stereotype.Service;
 
 import com.vamshi.HospitalManagementSystem.auth.dto.AuthResponse;
 import com.vamshi.HospitalManagementSystem.auth.dto.LoginRequest;
+import com.vamshi.HospitalManagementSystem.auth.dto.RefreshTokenRequest;
+import com.vamshi.HospitalManagementSystem.auth.dto.RefreshTokenResponse;
 import com.vamshi.HospitalManagementSystem.auth.dto.RegisterRequest;
+import com.vamshi.HospitalManagementSystem.auth.entities.RefreshTokenEntity;
+import com.vamshi.HospitalManagementSystem.auth.repositories.RefreshTokenRepository;
 import com.vamshi.HospitalManagementSystem.auth.security.JwtUtil;
 import com.vamshi.HospitalManagementSystem.common.enums.Role;
 import com.vamshi.HospitalManagementSystem.exceptions.ResourceAlreadyExistsException;
@@ -28,81 +33,177 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    private final UserRepository userRepository;
+        private final UserRepository userRepository;
 
-    private final PasswordEncoder passwordEncoder;
+        private final PasswordEncoder passwordEncoder;
 
-    private final AuthenticationManager authenticationManager;
+        private final AuthenticationManager authenticationManager;
 
-    private final PatientProfileRepository patientProfileRepository;
+        private final PatientProfileRepository patientProfileRepository;
 
-    private final JwtUtil jwtUtil;
+        private final RefreshTokenRepository refreshTokenRepository;
 
-    @Override
-    public AuthResponse register(RegisterRequest request) {
+        private final TokenBlacklistService tokenBlacklistService;
 
-        if (userRepository.existsByphoneNumber(request.getPhoneNumber())) {
-            throw new ResourceAlreadyExistsException("Phone Number Already Exists");
+        private final JwtUtil jwtUtil;
+
+        @Override
+        public AuthResponse register(RegisterRequest request) {
+
+                if (userRepository.existsByphoneNumber(request.getPhoneNumber())) {
+                        throw new ResourceAlreadyExistsException("Phone Number Already Exists");
+                }
+
+                UserEntity user = new UserEntity();
+
+                user.setName(request.getName());
+                user.setEmail(request.getEmail());
+                user.setPassword(passwordEncoder.encode(request.getPassword()));
+                user.setPhoneNumber(request.getPhoneNumber());
+                user.setRole(Role.PATIENT);
+
+                UserEntity savedUser = userRepository.save(user);
+
+                PatientProfileEntity patientProfile = PatientProfileEntity
+                                .builder()
+                                .user(savedUser)
+                                .build();
+
+                patientProfileRepository.save(patientProfile);
+
+                UserDetails userDetails = buildUserDetails(savedUser);
+
+                String accessToken = jwtUtil.generateAccessToken(userDetails);
+                String refreshToken = generateAndSaveRefreshToken(
+                                savedUser, userDetails);
+
+                AuthResponse resp = new AuthResponse();
+
+                resp.setAccessToken(accessToken);
+                resp.setRefreshToken(refreshToken);
+                resp.setId(savedUser.getId());
+                resp.setRole(savedUser.getRole());
+                resp.setName(savedUser.getName());
+
+                return resp;
         }
 
-        UserEntity user = new UserEntity();
+        @Override
+        public AuthResponse login(LoginRequest request) {
 
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setRole(Role.PATIENT);
+                authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(request.getPhoneNumber(),
+                                                request.getPassword()));
 
-        UserEntity savedUser = userRepository.save(user);
+                UserEntity user = userRepository.findByPhoneNumber(
+                                request.getPhoneNumber())
+                                .orElseThrow(() -> new ResourceNotFoundException("User not exist"));
 
-        PatientProfileEntity patientProfile = PatientProfileEntity
-                .builder()
-                .user(savedUser)
-                .build();
+                UserDetails userDetails = buildUserDetails(user);
 
-        patientProfileRepository.save(patientProfile);
+                String accessToken = jwtUtil.generateAccessToken(userDetails);
+                String refreshToken = generateAndSaveRefreshToken(
+                                user, userDetails);
 
-        UserDetails userDetails = new User(
-                savedUser.getPhoneNumber(),
-                savedUser.getPassword(),
-                List.of(
-                        new SimpleGrantedAuthority(savedUser.getRole().name())));
+                AuthResponse response = new AuthResponse();
+                response.setId(user.getId());
+                response.setName(user.getName());
+                response.setRole(user.getRole());
+                response.setAccessToken(accessToken);
+                response.setRefreshToken(refreshToken);
 
-        String token = jwtUtil.generateToken(userDetails);
+                return response;
+        }
 
-        AuthResponse resp = new AuthResponse();
+        @Override
+        public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
+                String oldToken = request.getRefreshToken();
 
-        resp.setToken(token);
-        resp.setId(savedUser.getId());
-        resp.setRole(savedUser.getRole());
-        resp.setName(savedUser.getName());
+                RefreshTokenEntity storedToken = refreshTokenRepository
+                                .findByToken(oldToken)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Invalid refresh token"));
 
-        return resp;
-    }
+                if (storedToken.isRevoked()) {
+                        throw new IllegalStateException(
+                                        "Refresh token already used. " +
+                                                        "Possible token theft detected. " +
+                                                        "Please login again.");
+                }
 
-    @Override
-    public AuthResponse login(LoginRequest request) {
+                if (storedToken.getExpiryDate()
+                                .isBefore(LocalDateTime.now())) {
+                        throw new IllegalStateException(
+                                        "Refresh token expired. Please login again.");
+                }
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getPhoneNumber(), request.getPassword()));
+                String tokenType = jwtUtil.extractClaim(oldToken,
+                                claims -> claims.get("type", String.class));
 
-        UserEntity user = userRepository.findByPhoneNumber(
-                request.getPhoneNumber()).orElseThrow(() -> new ResourceNotFoundException("User not exist"));
+                if (!"REFRESH".equals(tokenType)) {
+                        throw new IllegalArgumentException(
+                                        "Invalid token type. Refresh token required.");
+                }
 
-        UserDetails userDetails = new User(
-                user.getPhoneNumber(),
-                user.getPassword(),
-                List.of(
-                        new SimpleGrantedAuthority(user.getRole().name())));
+                storedToken.setRevoked(true);
+                refreshTokenRepository.save(storedToken);
 
-        String token = jwtUtil.generateToken(userDetails);
+                UserEntity user = storedToken.getUser();
+                UserDetails userDetails = buildUserDetails(user);
 
-        AuthResponse response = new AuthResponse();
-        response.setId(user.getId());
-        response.setName(user.getName());
-        response.setRole(user.getRole());
-        response.setToken(token);
+                String newAccessToken = jwtUtil.generateAccessToken(userDetails);
 
-        return response;
-    }
+                String newRefreshToken = generateAndSaveRefreshToken(
+                                user, userDetails);
+
+                return RefreshTokenResponse.builder()
+                                .accessToken(newAccessToken)
+                                .refreshToken(newRefreshToken)
+                                .build();
+        }
+
+        private UserDetails buildUserDetails(UserEntity user) {
+                return new User(
+                                user.getPhoneNumber(),
+                                user.getPassword(),
+                                List.of(new SimpleGrantedAuthority(
+                                                user.getRole().name())));
+        }
+
+        // ── Helper — generate + save refresh token ───────────
+        private String generateAndSaveRefreshToken(
+                        UserEntity user, UserDetails userDetails) {
+
+                String refreshToken = jwtUtil
+                                .generateRefreshToken(userDetails);
+
+                RefreshTokenEntity tokenEntity = RefreshTokenEntity
+                                .builder()
+                                .token(refreshToken)
+                                .user(user)
+                                .expiryDate(LocalDateTime.now()
+                                                .plusDays(7))
+                                .revoked(false)
+                                .build();
+
+                refreshTokenRepository.save(tokenEntity);
+
+                return refreshToken;
+        }
+
+        @Override
+        public void logout(String accessToken) {
+                long expirationTime = jwtUtil.extractClaim(
+                                accessToken,
+                                claims -> claims.getExpiration().getTime());
+
+                long remainingTime = expirationTime
+                                - System.currentTimeMillis();
+
+                if (remainingTime > 0) {
+                        tokenBlacklistService.blacklistToken(
+                                        accessToken, remainingTime);
+                }
+
+        }
 }

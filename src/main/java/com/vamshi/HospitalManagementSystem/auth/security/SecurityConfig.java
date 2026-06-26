@@ -68,6 +68,10 @@ public class SecurityConfig {
                                                 .hasRole("DOCTOR")
 
                                                 .requestMatchers(HttpMethod.GET,
+                                                                "/api/prescriptions/*/download")
+                                                .hasAnyRole("DOCTOR", "PATIENT", "PHARMACIST")
+
+                                                .requestMatchers(HttpMethod.GET,
                                                                 "/api/prescriptions/doctor/**")
                                                 .hasRole("DOCTOR")
 

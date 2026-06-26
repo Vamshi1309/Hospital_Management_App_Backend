@@ -9,10 +9,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.vamshi.HospitalManagementSystem.auth.dto.AuthResponse;
 import com.vamshi.HospitalManagementSystem.auth.dto.LoginRequest;
+import com.vamshi.HospitalManagementSystem.auth.dto.RefreshTokenRequest;
+import com.vamshi.HospitalManagementSystem.auth.dto.RefreshTokenResponse;
 import com.vamshi.HospitalManagementSystem.auth.dto.RegisterRequest;
 import com.vamshi.HospitalManagementSystem.auth.services.AuthService;
 import com.vamshi.HospitalManagementSystem.common.ApiResponse;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -44,5 +47,32 @@ public class AuthController {
                                 .body(ApiResponse.success(
                                                 "Login successful",
                                                 response));
+        }
+
+        @PostMapping("/refresh")
+        public ResponseEntity<ApiResponse<RefreshTokenResponse>> refreshToken(
+                        @RequestBody @Valid RefreshTokenRequest request) {
+
+                RefreshTokenResponse response = authService
+                                .refreshToken(request);
+
+                return ResponseEntity.ok(
+                                ApiResponse.success(
+                                                "Token refreshed successfully", response));
+        }
+
+        @PostMapping("/logout")
+        public ResponseEntity<ApiResponse<Void>> logout(
+                        HttpServletRequest request) {
+
+                String authHeader = request.getHeader("Authorization");
+
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                        String token = authHeader.substring(7);
+                        authService.logout(token);
+                }
+
+                return ResponseEntity.ok(
+                                ApiResponse.success("Logged out successfully"));
         }
 }

@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.vamshi.HospitalManagementSystem.prescription.dtos.CreatePrescriptionRequest;
 import com.vamshi.HospitalManagementSystem.prescription.dtos.PrescriptionResponse;
+import com.vamshi.HospitalManagementSystem.prescription.entities.PrescriptionEntity;
 
 public interface PrescriptionService {
     PrescriptionResponse createPrescription(CreatePrescriptionRequest request);
@@ -14,4 +15,6 @@ public interface PrescriptionService {
     List<PrescriptionResponse> getPrescriptionsByDoctor(UUID doctorId);
 
     List<PrescriptionResponse> getPrescriptionsByPatient(UUID patientId);
+
+    PrescriptionEntity getPrescriptionEntityById(UUID id);
 }

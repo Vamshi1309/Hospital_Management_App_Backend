@@ -3,6 +3,7 @@ package com.vamshi.HospitalManagementSystem.auth.security;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import javax.crypto.SecretKey;
 
@@ -19,23 +20,42 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    @Value("${jwt.expiration}")
-    private long jwtExpiration;
+    @Value("${jwt.access.expiration}")
+    private long accessTokenExpiration;
 
-    public String generateToken(UserDetails userDetails) {
+    @Value("${jwt.refresh.expiration}")
+    private long refreshTokenExpiration;
+
+    // =====================AccessToken==============================//
+    public String generateAccessToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
 
         claims.put("role", userDetails.getAuthorities().iterator().next().getAuthority());
+        claims.put("type", "ACCESS");
 
-        return createToken(claims, userDetails.getUsername());
+        return createToken(claims, userDetails.getUsername(), accessTokenExpiration);
     }
 
-    private String createToken(Map<String, Object> claims, String userName) {
+    // ========================RefreshToken=========================//
+    public String generateRefreshToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+
+        claims.put("type", "REFRESH");
+        // unique identifier so same refresh token
+        // is never generated twice
+        claims.put("jti", UUID.randomUUID().toString());
+
+        return createToken(claims,
+                userDetails.getUsername(),
+                refreshTokenExpiration);
+    }
+
+    private String createToken(Map<String, Object> claims, String userName, long expiration) {
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(userName)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSignKey())
                 .compact();
     }
@@ -79,7 +99,7 @@ public class JwtUtil {
     private SecretKey getSignKey() {
 
         return Keys.hmacShaKeyFor(
-            secretKey.getBytes());
+                secretKey.getBytes());
     }
 
 }
