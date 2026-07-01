@@ -1,7 +1,7 @@
 name: Build and Deploy
 
-on: 
-  push: 
+on:
+  push:
     branches:
       - main
 
@@ -12,7 +12,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
-    steps: 
+    steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
@@ -46,36 +46,31 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            aws ecr get-login-password \
-              --region ${{ secrets.AWS_REGION }} | \
-              docker login \
-              --username AWS \
-              --password-stdin \
-              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+            cd /home/ubuntu/hospital-management
 
-            docker stop hospital-app || true
-            docker rm hospital-app || true
+            cat > .env <<EOF
+            DB_URL=${{ secrets.DB_URL }}
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_ACCESS_EXPIRATION=900000
+            JWT_REFRESH_EXPIRATION=604800000
+            ADMIN_PHONE=${{ secrets.ADMIN_PHONE }}
+            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+            REDIS_HOST=redis
+            REDIS_PORT=6379
+            AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET_NAME }}
+            AWS_S3_REGION=${{ secrets.AWS_REGION }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+EOF
 
-            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
-            docker run -d \
-              --name hospital-app \
-              -p 8080:8080 \
-              --network host \
-              -e DB_URL=${{ secrets.DB_URL }} \
-              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
-              -e JWT_ACCESS_EXPIRATION=900000 \
-              -e JWT_REFRESH_EXPIRATION=604800000 \
-              -e ADMIN_PHONE=${{ secrets.ADMIN_PHONE }} \
-              -e ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
-              -e REDIS_HOST=localhost \
-              -e REDIS_PORT=6379 \
-              -e AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET_NAME }} \
-              -e AWS_S3_REGION=${{ secrets.AWS_REGION }} \
-              -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
-              -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
+            docker compose down
+
+            docker compose pull
+
+            docker compose up -d
 
             docker image prune -f
