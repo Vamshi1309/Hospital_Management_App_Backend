@@ -4,7 +4,6 @@ import java.util.UUID;
 
 import com.vamshi.HospitalManagementSystem.common.enums.ReportType;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,9 +17,6 @@ public class CreateLabReportRequest {
 
     @NotNull(message = "Report type is required")
     private ReportType reportType;
-
-    @NotBlank(message = "reportUrl is required")
-    private String reportUrl;
 
     private String findings;
 }

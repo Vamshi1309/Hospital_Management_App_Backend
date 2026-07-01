@@ -5,10 +5,10 @@ import java.util.UUID;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.vamshi.HospitalManagementSystem.appointment.entities.AppointmentEntity;
 import com.vamshi.HospitalManagementSystem.appointment.repositories.AppointmentRepository;
-import com.vamshi.HospitalManagementSystem.exceptions.BadRequestException;
 import com.vamshi.HospitalManagementSystem.exceptions.ResourceAlreadyExistsException;
 import com.vamshi.HospitalManagementSystem.exceptions.ResourceNotFoundException;
 import com.vamshi.HospitalManagementSystem.labreport.dtos.CreateLabReportRequest;
@@ -24,81 +24,94 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LabReportServiceImpl implements LabReportService {
 
-    private final LabReportRepository labReportRepository;
-    private final AppointmentRepository appointmentRepository;
-    private final UserRepository userRepository;
+        private final LabReportRepository labReportRepository;
+        private final AppointmentRepository appointmentRepository;
+        private final UserRepository userRepository;
+        private final S3Service s3Service;
 
-    @Override
-    public LabReportResponse createLabReport(CreateLabReportRequest request) {
-        String phoneNumber = SecurityContextHolder.getContext().getAuthentication().getName();
+        @Override
+        public LabReportResponse createLabReport(CreateLabReportRequest request, MultipartFile file) {
+                String phoneNumber = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        UserEntity radiologist = userRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("User not Found"));
+                UserEntity radiologist = userRepository.findByPhoneNumber(phoneNumber)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not Found"));
 
-        AppointmentEntity appointment = appointmentRepository.findById(request.getAppointmentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+                AppointmentEntity appointment = appointmentRepository.findById(request.getAppointmentId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
-        if (labReportRepository.existsByAppointmentId(
-                appointment.getId())) {
-            throw new ResourceAlreadyExistsException(
-                    "Report already exists");
+
+                if (labReportRepository.existsByAppointmentId(
+                                appointment.getId())) {
+                        throw new ResourceAlreadyExistsException(
+                                        "Report already exists");
+                }
+
+                String fileKey = s3Service.uploadFile(file);
+
+                LabReportEntity labReport = LabReportEntity.builder()
+                                .appointment(appointment)
+                                .patient(appointment.getPatient())
+                                .radiologist(radiologist)
+                                .reportType(request.getReportType())
+                                .reportUrl(fileKey)
+                                .findings(request.getFindings())
+                                .build();
+
+                LabReportEntity savedReport = labReportRepository.save(labReport);
+
+                return mapToResponse(savedReport);
         }
 
-        LabReportEntity labReport = LabReportEntity.builder()
-                .appointment(appointment)
-                .patient(appointment.getPatient())
-                .radiologist(radiologist)
-                .reportType(request.getReportType())
-                .reportUrl(request.getReportUrl())
-                .findings(request.getFindings())
-                .build();
+        @Override
+        public LabReportResponse getLabReportById(UUID id) {
+                LabReportEntity labReport = labReportRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException("Lab Report Not Found"));
 
-        LabReportEntity savedReport = labReportRepository.save(labReport);
+                return mapToResponse(labReport);
+        }
 
-        return mapToResponse(savedReport);
-    }
+        @Override
+        public List<LabReportResponse> getLabReportByPatientId(UUID patientId) {
+                List<LabReportEntity> labReports = labReportRepository.findByPatientId(patientId);
 
-    @Override
-    public LabReportResponse getLabReportById(UUID id) {
-        LabReportEntity labReport = labReportRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Lab Report Not Found"));
+                return labReports
+                                .stream()
+                                .map(this::mapToResponse)
+                                .toList();
+        }
 
-        return mapToResponse(labReport);
-    }
+        @Override
+        public List<LabReportResponse> getLabReportByAppointmentId(UUID appointmentId) {
+                List<LabReportEntity> labReports = labReportRepository.findByAppointmentId(appointmentId);
 
-    @Override
-    public List<LabReportResponse> getLabReportByPatientId(UUID patientId) {
-        List<LabReportEntity> labReports = labReportRepository.findByPatientId(patientId);
+                return labReports
+                                .stream()
+                                .map(this::mapToResponse)
+                                .toList();
+        }
 
-        return labReports
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
+        private LabReportResponse mapToResponse(LabReportEntity labReport) {
+                return LabReportResponse.builder()
+                                .reportId(labReport.getId())
+                                .appointmentId(labReport.getAppointment().getId())
+                                .patientId(labReport.getPatient().getId())
+                                .patientName(labReport.getPatient().getName())
+                                .radiologistId(labReport.getRadiologist().getId())
+                                .radiologistName(labReport.getRadiologist().getName())
+                                .reportType(labReport.getReportType().name())
+                                .reportUrl(labReport.getReportUrl())
+                                .findings(labReport.getFindings())
+                                .createdAt(labReport.getCreatedAt())
+                                .build();
+        }
 
-    @Override
-    public List<LabReportResponse> getLabReportByAppointmentId(UUID appointmentId) {
-        List<LabReportEntity> labReports = labReportRepository.findByAppointmentId(appointmentId);
+        @Override
+        public String getDownloadUrl(UUID reportId) {
+                LabReportEntity report = labReportRepository
+                                .findById(reportId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Lab report not found"));
 
-        return labReports
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    private LabReportResponse mapToResponse(LabReportEntity labReport) {
-        return LabReportResponse.builder()
-                .reportId(labReport.getId())
-                .appointmentId(labReport.getAppointment().getId())
-                .patientId(labReport.getPatient().getId())
-                .patientName(labReport.getPatient().getName())
-                .radiologistId(labReport.getRadiologist().getId())
-                .radiologistName(labReport.getRadiologist().getName())
-                .reportType(labReport.getReportType().name())
-                .reportUrl(labReport.getReportUrl())
-                .findings(labReport.getFindings())
-                .createdAt(labReport.getCreatedAt())
-                .build();
-    }
-
+                return s3Service.generateDownloadUrl(report.getReportUrl());
+        }
 }

@@ -4,6 +4,7 @@ on:
   push: 
     branches:
       - main
+
 env:
   ECR_REPO: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}
 
@@ -33,7 +34,6 @@ jobs:
         run: |
           docker push $ECR_REPO:latest
 
-
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -46,14 +46,36 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home/ubuntu/hospital-management
+            aws ecr get-login-password \
+              --region ${{ secrets.AWS_REGION }} | \
+              docker login \
+              --username AWS \
+              --password-stdin \
+              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
-            aws ecr get-login-password --region ap-south-2 | docker login --username AWS --password-stdin 515879578697.dkr.ecr.ap-south-2.amazonaws.com
+            docker stop hospital-app || true
+            docker rm hospital-app || true
 
-            docker compose pull
+            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
 
-            docker compose down
-
-            docker compose up -d
+            docker run -d \
+              --name hospital-app \
+              -p 8080:8080 \
+              --network host \
+              -e DB_URL=${{ secrets.DB_URL }} \
+              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              -e JWT_ACCESS_EXPIRATION=900000 \
+              -e JWT_REFRESH_EXPIRATION=604800000 \
+              -e ADMIN_PHONE=${{ secrets.ADMIN_PHONE }} \
+              -e ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
+              -e REDIS_HOST=localhost \
+              -e REDIS_PORT=6379 \
+              -e AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET_NAME }} \
+              -e AWS_S3_REGION=${{ secrets.AWS_REGION }} \
+              -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
+              -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
+              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
 
             docker image prune -f
